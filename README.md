@@ -42,25 +42,87 @@
 
 ## 1. The problem
 
-When a subscription payment fails, almost every dunning tool does the same thing: **it contacts everyone.**
-That is wrong in three ways, and all three are common in real payment data:
+### A story every subscription business knows
 
-| Customer | What contact does | Cost of the usual approach |
-| --- | --- | --- |
-| **Self-recoverer**: a bank hiccup, and the card works on Stripe's next retry | They pay anyway | Money spent for nothing |
-| **Chase-averse**: dislikes being chased | They **cancel** | You pay to lose the customer |
-| **Needs a nudge**: wants to pay, but the card expired or 3-D Secure wasn't finished | They pay *because* you acted | The only group worth paying to reach |
+> *The company and the people below are an illustration, not a customer.*
 
-Now that an AI voice agent can phone the customer, there is a fourth mistake: **calling someone an email would have
-recovered.** A call costs about 25× an email.
+It is the 1st of the month at **Acme Cloud**, a small SaaS company with a few thousand subscribers. Overnight, Stripe
+tries to renew every subscription. By morning, **three hundred payments have failed.**
 
-So the right question is not *"who is likely to pay?"* That is propensity, and it ranks self-recoverers first. It is:
+Nobody on the team decided to lose those customers. Cards expired. Banks asked for a 3-D Secure check that nobody
+saw. A bank's systems were briefly down. Some cards are simply empty. This is **involuntary churn**: revenue that
+walks out the door without anyone choosing to leave.
 
-> **Who pays *because* we acted, and is the extra recovery from a call worth the price of the call?**
+Maya runs billing, and she has the tool every company has: **dunning**, a reminder sequence sent to everyone whose
+payment failed. It feels responsible. It is quietly expensive in three ways she can't see:
+
+1. **Daniel** would have paid anyway. His bank was down for twenty minutes, and Stripe's automatic retry would have
+   succeeded the next day. Maya paid to remind someone who needed no reminder.
+2. **Sofia** has been a customer for three years and hates being chased. The third "your payment failed" email
+   arrives while she is comparing competitors. She cancels. **Maya paid to lose a loyal customer.**
+3. **Arjun** genuinely wants to pay. His card expired and he needs a clear, secure way to update it. The generic
+   email went to spam. He is the one person worth reaching, and the broad campaign missed him.
+
+Now the team hears about **AI voice agents** that can phone customers. It sounds like the fix. But a call costs about
+**25 times** an email, and handing an autonomous agent your customers' phone numbers and payment problems brings new
+risks.
+
+### What can go wrong: the risks this project had to take seriously
+
+| # | Risk | What it looks like in practice | Who gets hurt |
+| --- | --- | --- | --- |
+| R1 | **Wasted spend** | Contacting customers who would have paid anyway | The business's margin |
+| R2 | **Chasing causes churn** | Reminders and calls push chase-averse customers to cancel | Revenue and relationships |
+| R3 | **Calls where email would do** | An AI call costs about 25× an email for the same outcome | The business's margin |
+| R4 | **Calling without consent** | Automated calls to people who never agreed to them, which can be illegal in many places | The customer, and the company legally |
+| R5 | **Card details taken by voice** | An agent asks for a card number on the phone, putting card data in call transcripts | The customer, and compliance with card-security rules (PCI) |
+| R6 | **Disclosing to the wrong person** | The amount owed is left on voicemail or told to a family member | Customer privacy |
+| R7 | **Invented facts** | A language model states the wrong amount, or a reason nobody measured | Trust; possible disputes |
+| R8 | **Double contact or double charge** | A retry or re-run fires the same action twice | The customer |
+| R9 | **Runaway spend** | An agent keeps calling with no budget or stopping rule | The business |
+| R10 | **Fake success** | A failed API call gets logged as sent, so the audit trail lies | Everyone who relies on the log |
+| R11 | **A model that doesn't work** | Targeting that is no better than random, or confident predictions that don't hold up | Every decision downstream |
+| R12 | **Unanswered or unresolved calls** | The call reaches voicemail, someone else answers, or the customer disputes the charge | The customer experience |
+
+### The question we set out to answer
+
+The usual question, *"who is likely to pay?"*, is **propensity**, and it ranks Daniel first. The right question is:
+
+> **Who pays *because* we acted? And for them, is the extra recovery from a call worth the price of the call?**
 
 ```
 tau(x) = P(recover | contacted, x) − P(recover | left alone, x)        ← the incremental effect (uplift)
 ```
+
+### How this agent answers each risk
+
+| Risk | Our answer | Where it lives | How it is proven |
+| --- | --- | --- | --- |
+| R1 Wasted spend | Estimate **uplift**, not propensity; do nothing when the effect is below the model's measured error (3pp) | `uplift.mjs`, `recover.mjs` | 57% of self-recoverers are contacted and **0% are called** (table in §5) |
+| R2 Chasing causes churn | Block predicted "sleeping dogs"; pacer rule **B4** halts a batch that contacts any | `pacer.mjs` | 0% of chase-averse customers called; **37% still emailed**, reported as an open weakness |
+| R3 Calls where email would do | Choose the channel by **expected value**: a call must beat email *after* its extra cost | `recover.mjs` `decide()` | Calling everyone is the worst contact policy: +$1,396 vs the agent's +$2,521 |
+| R4 No consent | No consent, no call, enforced twice: in the decision and in pacer rule **D5**; dial only allowlisted numbers | `calle.mjs`, `pacer.mjs` | Tests: refused before any network request |
+| R5 Card data by voice | **Refuse any call script that collects card details**; the customer pays only on Stripe's own page | `calle.mjs`, `email.mjs` | Test: a card-collecting script is rejected |
+| R6 Wrong person | The call script requires identity confirmation first, and leaves nothing about money on voicemail | `calle.mjs` | Script carries all 6 safety rules (test); rehearsed by Scar |
+| R7 Invented facts | Numbers come from code; every sentence is checked against evidence; an optional LLM may only rephrase | `explain.mjs` | **0 unsupported claims** dropped on the run |
+| R8 Double action | sha256 idempotency key checked in our own ledger **before** the API call; Stripe `Idempotency-Key` on every request | `policy.mjs`, `stripe.mjs` | Tests: a replayed action never calls the adapter again |
+| R9 Runaway spend | A hard budget, approval tiers, and **two distinct people** for large amounts | `policy.mjs`, `pacer.mjs` | Tests: budget stops mid-batch; the same approver twice is rejected |
+| R10 Fake success | Failures recorded verbatim with a null reference; "success" without a reference counts as failure | `policy.mjs` | Tests; every LIVE row in §6 shows its real reference |
+| R11 Model that doesn't work | Qini on held-out data; calibration by decile; pacer **B5** halts if the model is no better than random | `calibration.mjs`, `pacer.mjs` | Qini 31.1; calibration error 2.97pp, rank correlation 0.916 |
+| R12 Unresolved calls | A structured call result (`answered_by`, `outcome`, `evidence_quote`), read back after the call; **Scar** learns from repeated failures | `calle.mjs`, `scar/` | First live call honestly recorded as `no_answer`; Scar skill 32/32 in rehearsal |
+
+### What we have proven, and for whom
+
+This is a hackathon build, so we are precise about what is proven:
+
+- **Proven end to end on live systems, for one demo merchant.** In a single live run for *Acme Cloud*, a fictional
+  merchant, with Stripe in test mode: Stripe really declined the payments, the recovery links were real Stripe
+  Checkout pages, CALL-E placed the call, Resend delivered the email and Slack received the summary. Every step
+  returned a real reference id (§6).
+- **Proven on a measured batch.** On 3,109 synthetic failed payments shaped like Stripe data, the agent beat every
+  baseline on held-out data (§5).
+- **Not yet proven:** results on a real company's customers. No real merchant's data or customers were used. That
+  is the next step, and `featurise()` is built to take real Stripe events unchanged.
 
 ---
 
