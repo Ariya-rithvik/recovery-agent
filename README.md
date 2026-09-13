@@ -21,8 +21,156 @@
 
 ---
 
+## ▶ Demo
+
+<div align="center">
+
+[![Watch the demo video](https://img.youtube.com/vi/KDlJxjjAsIw/maxresdefault.jpg)](https://youtu.be/KDlJxjjAsIw)
+
+**[▶ Watch the demo on YouTube](https://youtu.be/KDlJxjjAsIw)**
+
+</div>
+
+The walkthrough below follows the video one step at a time. For each step it shows what you're looking at and why it matters.
+
+<!--
+  HOW TO ADD A SCREENSHOT
+  1. Save the image as docs/screenshots/<name>.png, using the file names below.
+  2. Delete the <!-- and --> around the matching ![...](...) line.
+-->
+
+### Step 1: One command runs the whole agent live
+
+```bash
+npm run live -- --approvers=asha,ravi
+```
+
+The agent reads 3,109 failed payments ($90,716 at risk) with real Stripe decline codes. It trains an uplift model and
+checks that the model is better than contacting customers at random (**Qini 31.1**).
+
+```
+1 · DETECT    3109 invoice.payment_failed events in the window, $90,716 at risk
+2 · QUALIFY   uplift model trained on 783 contacted / 771 not contacted
+              Qini 31.1214 on a held-out split   (0 = no better than contacting at random)
+3 · DECIDE    budget $576.97   call $1.50 vs email $0.06   tiers: auto <=$25 · one-click <=$100 · two-person above
+```
+
+<!-- ![Terminal: detect, qualify, decide](docs/screenshots/01-terminal-start.png) -->
+
+### Step 2: It beats every alternative
+
+The agent is compared with every other strategy on data the model never saw. **Emailing everyone** (typical
+dunning) earns +$2,130. **Calling everyone** is the worst option at +$1,396, because calls are expensive. **The agent
+earns +$2,521**: $391 more than emailing everyone, with 30% fewer contacts.
+
+```
+POLICY                       CONTACTED  CALLS  RECOVERED     SPENT  NET MARGIN  VS NOTHING
+Contact nobody                       0      0        496     $0.00      $9,218      +$0.00
+Email everyone (dunning)          1555      0        618    $93.30     $11,348     +$2,130
+Everyone, call if allowed         1555   1080        664    $1,649     $10,614     +$1,396
+Propensity top 1096               1096    196        628   $348.00     $11,455     +$2,237
+This agent (gated)                1096    232        646   $399.84     $11,739     +$2,521
+```
+
+<!-- ![Terminal: results table](docs/screenshots/02-results.png) -->
+
+### Step 3: Every decision explains itself, with checked numbers
+
+Customer **C7747** gets an AI voice call: a call is worth $24.04 against $16.54 for an email. Customer **C0432** has no
+consent to be called, so it gets an email. **C2223** is declined because the effect is too small to trust. Every number
+in these explanations is checked against evidence. **0 unsupported claims.**
+
+```
+C7747  CONTACT — AI voice call
+    Payment of $132.43 was declined (authentication required), after 3 attempt(s). Left alone, this customer
+    recovers 22% of the time. Contacting them lifts recovery to 54%, an incremental +32.1pp. A voice call is worth
+    $24.04 here against $16.54 for an email. Requires two-person approval.
+
+C2223  DECLINED — inside the model's measured error — estimated effect 1.7pp, floor 3.0pp
+```
+
+<!-- ![Terminal: decision briefs](docs/screenshots/03-briefs.png) -->
+
+### Step 4: Safety rules, and calls placed on the right people
+
+The same safety rules would **halt 179 actions** on a propensity-targeted list. Calls go to **38%** of customers who
+need a nudge, and **0%** of self-recoverers or of customers who cancel when chased.
+
+```
+same rules on the PROPENSITY list: 179 would have been halted
+archetype        in batch  contacted  called   true uplift
+self_recoverer        431        57%      0%        +2.0pp
+nudge_needed          518       100%     38%       +33.0pp
+hard_fail             383        65%      9%        +5.5pp
+annoyed               223        37%      0%       -11.5pp
+```
+
+<!-- ![Terminal: governance and archetypes](docs/screenshots/04-governance.png) -->
+
+### Step 5: All four apps show LIVE, each with a real reference
+
+```
+INTEGRATIONS — what actually happened on this run
+ Stripe (test mode)    LIVE     pi_3UFL6t3KGHkj4q0e0eZqDCZI · pi_3UFL6y3KGHkj4q0e0nUFWJtk · 2 Checkout Sessions
+ Resend (email)        LIVE     11e7a738-7945-4690-85ae-ce798d7149bb
+ CALL-E (AI voice)     LIVE     call_zEUuaiVn5V_Ucxd_jZPGGg
+ Slack (webhook)       LIVE     HTTP 200 "ok"
+ Scar (learning)       RAN      skill failed-payment-recovery-call · checks 6/6 · 0/32 -> 32/32
+```
+
+<!-- ![Terminal: integrations all LIVE](docs/screenshots/05-integrations.png) -->
+
+### Step 6: Stripe, where the payment was really declined
+
+In the Stripe dashboard (test mode), payment `pi_3UFL6t3KGHkj4q0e0eZqDCZI` for **$132.43** shows as **Incomplete**, charged to
+*Synthetic customer C7747*. Its events show **"An attempt to fulfill the payment … failed"**, and its metadata carries
+`twin_id: C7747` and `intended_decline: authentication_required`.
+
+In Stripe's API log, every call the agent made appears: customers, payment-method attachment, PaymentIntents
+(declined with **402**, as intended), and Checkout Sessions (**200**). Each request carries the agent's idempotency key,
+for example `cs:rcv_in_0432_1m2q_2:v1`.
+
+<!-- ![Stripe: declined payment](docs/screenshots/06-stripe-payment.png) -->
+<!-- ![Stripe: events and API log](docs/screenshots/07-stripe-logs.png) -->
+
+### Step 7: The phone call (CALL-E)
+
+The AI agent phones the customer. It says it is an automated assistant, **confirms who it is speaking to before
+discussing money**, offers to email a secure payment link, and **never asks for card details**.
+
+<!-- ![Phone: incoming CALL-E call](docs/screenshots/08-call.png) -->
+
+### Step 8: The recovery email (Resend)
+
+Customer C0432 has no consent to be called, so they get an email: *"Acme Cloud: your payment of $85.22 didn't go
+through."* The link opens a **real Stripe Checkout page**, and the email states that card details are never requested
+by email or phone.
+
+<!-- ![Gmail: recovery email](docs/screenshots/09-email.png) -->
+
+### Step 9: The operator summary in Slack
+
+The operations channel receives the batch summary:
+
+```
+Recovery batch
+• 1555 failed payments · $45,410 at risk (synthetic customers)
+• contacting 1096: 232 AI voice calls, 864 emails · declined 459
+• net margin vs doing nothing: +$2,521
+• awaiting approval: two-person 5, one-click 455
+• pacer: proceed
+```
+
+> Slack reports the **1,555 payments the agent decided on**, which is the held-out half. The terminal's 3,109 / $90,716 is
+> the whole batch, and the other half trained the model.
+
+<!-- ![Slack: recovery batch message](docs/screenshots/10-slack.png) -->
+
+---
+
 ## Contents
 
+- [▶ Demo](#-demo)
 1. [The problem](#1-the-problem)
 2. [What the agent does](#2-what-the-agent-does)
 3. [Architecture](#3-architecture)
@@ -36,7 +184,6 @@
 11. [Testing](#testing)
 12. [Repository layout](#12-repository-layout)
 13. [Limitations, stated plainly](#13-limitations-stated-plainly)
-14. [Credits](#14-credits)
 
 ---
 
@@ -527,15 +674,6 @@ read. Without the floor, 51% of chase-averse customers were contacted.
 
 ---
 
-## 14. Credits
-
-- **Governance patterns:** pure pacer rules, the pre-call idempotency ledger, verbatim failure and cited briefs come from
-  **[Manthan](https://github.com/akash-mondal/manthan)**, our team's dispute-investigation agent for Stripe. They were
-  reimplemented here. Manthan investigates a dispute *after* it happens; this agent decides *before* anyone is
-  contacted. No Manthan code ships in this repository.
-- **Uplift engine, ledger and pacer:** first written by us for an earlier hackathon entry on a different payment
-  provider, then ported to Stripe.
-- **Scar and the CALL-E adapter:** began as our CALL-E project.
-- **Uplift estimator:** class-variable transformation (Jaskowski & Jaroszewicz, 2012).
+## License
 
 Released under the [MIT License](LICENSE).
