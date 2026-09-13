@@ -129,11 +129,18 @@ upstream error and a null reference. We never synthesise a success.
 | **Resend** (email) | Sends the Stripe recovery link. | Only `DEMO_EMAIL` receives mail. Never asks for card details. |
 | **Slack** | Posts the batch summary and approval queue to the operator channel. | Notification only — a webhook cannot tell us *who* clicked, so it approves nothing. |
 
-**Status, stated precisely.** Every guard above is covered by **24 adapter tests with the network disabled**. The
-live HTTP paths are written against each API's documented contract, but **none has returned a response in this
-environment yet — no keys were present when this was written.** `npm run live` prints an INTEGRATIONS block that
-marks each app `LIVE` (with its reference id), `NOT SET`, or `FAILED` (with the verbatim error). Quote that block, not
-this paragraph.
+**Status, stated precisely.** Every guard above is covered by **24 adapter tests with the network disabled**, and
+all four apps have returned real responses in a live run (2026-09-14, Stripe test mode):
+
+| App | Live result | Reference |
+| --- | --- | --- |
+| Stripe | 2 customers, 2 PaymentIntents **declined by Stripe with `authentication_required`** (read back, event ids found), 2 Checkout recovery links | `pi_3UFL6t3KGHkj4q0e0eZqDCZI`, `evt_3UFL6t3KGHkj4q0e05s99IVG` |
+| CALL-E | call accepted after two distinct approvals | `call_NjZaL57MP3RCnC3RF_VYiA` |
+| Resend | recovery email with the real Checkout link, delivered to the demo inbox | `11e7a738-7945-4690-85ae-ce798d7149bb` |
+| Slack | batch summary posted | HTTP 200 `ok` (webhooks return no id) |
+
+"Accepted" is what CALL-E confirms at dial time; what the person on the phone said comes later from
+`npm run call:status -- <call_id>`. The customers are still synthetic — only these sample rows touched the APIs.
 
 ## Learning from failed calls — Scar
 
@@ -195,7 +202,7 @@ real Stripe data changes nothing downstream.
 
 **Assumed:** call cost, and the email/call split of the contact effect (see above).
 
-**Not yet exercised live:** the four external APIs (see *Status* above).
+**Exercised live:** all four external APIs, on a two-row sample (see *Status* above).
 
 **We did not tune until it passed.** Where a run did not flatter us — the gates adding no margin, chase-averse
 customers still emailed — it is in the table and in this file.
