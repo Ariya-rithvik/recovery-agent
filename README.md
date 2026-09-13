@@ -31,6 +31,10 @@
 
 </div>
 
+> **Note for reviewers:** because of network issues while recording, the video may lag in places or may not be
+> fully edited. **The complete demo is written out below**, one step at a time, with screenshots and an explanation
+> for every step. Please use this walkthrough if anything in the video is unclear.
+
 The walkthrough below follows the video one step at a time. For each step it shows what you're looking at and why it matters.
 
 <!--
@@ -55,7 +59,7 @@ checks that the model is better than contacting customers at random (**Qini 31.1
 3 · DECIDE    budget $576.97   call $1.50 vs email $0.06   tiers: auto <=$25 · one-click <=$100 · two-person above
 ```
 
-<!-- ![Terminal: detect, qualify, decide](docs/screenshots/01-terminal-start.png) -->
+![Terminal: detect, qualify, decide](docs/screenshots/01-terminal-start.svg)
 
 ### Step 2: It beats every alternative
 
@@ -72,7 +76,7 @@ Propensity top 1096               1096    196        628   $348.00     $11,455  
 This agent (gated)                1096    232        646   $399.84     $11,739     +$2,521
 ```
 
-<!-- ![Terminal: results table](docs/screenshots/02-results.png) -->
+![Terminal: results table](docs/screenshots/02-results.svg)
 
 ### Step 3: Every decision explains itself, with checked numbers
 
@@ -89,7 +93,7 @@ C7747  CONTACT — AI voice call
 C2223  DECLINED — inside the model's measured error — estimated effect 1.7pp, floor 3.0pp
 ```
 
-<!-- ![Terminal: decision briefs](docs/screenshots/03-briefs.png) -->
+![Terminal: decision briefs](docs/screenshots/03-briefs.svg)
 
 ### Step 4: Safety rules, and calls placed on the right people
 
@@ -105,7 +109,7 @@ hard_fail             383        65%      9%        +5.5pp
 annoyed               223        37%      0%       -11.5pp
 ```
 
-<!-- ![Terminal: governance and archetypes](docs/screenshots/04-governance.png) -->
+![Terminal: governance and archetypes](docs/screenshots/04-governance.svg)
 
 ### Step 5: All four apps show LIVE, each with a real reference
 
@@ -118,7 +122,7 @@ INTEGRATIONS — what actually happened on this run
  Scar (learning)       RAN      skill failed-payment-recovery-call · checks 6/6 · 0/32 -> 32/32
 ```
 
-<!-- ![Terminal: integrations all LIVE](docs/screenshots/05-integrations.png) -->
+![Terminal: integrations all LIVE](docs/screenshots/05-integrations.svg)
 
 ### Step 6: Stripe, where the payment was really declined
 

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="640" font-family="Consolas,Menlo,monospace" font-size="14">
+<rect width="100%" height="100%" rx="10" fill="#0d1117"/><rect width="100%" height="32" rx="10" fill="#161b22"/>
+<circle cx="20" cy="16" r="6" fill="#ff5f56"/><circle cx="40" cy="16" r="6" fill="#ffbd2e"/><circle cx="60" cy="16" r="6" fill="#27c93f"/>
+<text x="84" y="21" fill="#8b949e" font-size="13">Decision briefs</text>
+<g xml:space="preserve" style="white-space:pre"><text x="24" y="56" fill="#7ee787">  C7747  CONTACT — AI voice call</text>
+<text x="24" y="75" fill="#e6edf3">      Payment of $132.43 was declined (authentication required), after 3</text>
+<text x="24" y="94" fill="#e6edf3">      attempt(s). Left alone, this customer recovers 22% of the time.</text>
+<text x="24" y="113" fill="#e6edf3">      Contacting them lifts recovery to 54%, an incremental +32.1pp. They have</text>
+<text x="24" y="132" fill="#e6edf3">      completed 7 prior payments, 100% of them by wallet. A voice call is</text>
+<text x="24" y="151" fill="#e6edf3">      worth $24.04 here against $16.54 for an email, because a call captures</text>
+<text x="24" y="170" fill="#e6edf3">      the whole effect and an email only part of it. Recommend: place an AI</text>
+<text x="24" y="189" fill="#e6edf3">      voice call and send the Stripe recovery link. Expected value $24.04.</text>
+<text x="24" y="208" fill="#e6edf3">      Requires two-person approval.</text>
+<text x="24" y="227" fill="#e6edf3">      evidence: decline code authentication required · estimated incremental effect 32.1pp · recovers unprompted 22% · consent to be called on file · expected value of acting $24.04 · expected value of the other channel $16.54</text>
+<text x="24" y="246" fill="#e6edf3"></text>
+<text x="24" y="265" fill="#7ee787">  C0432  CONTACT — email with recovery link</text>
+<text x="24" y="284" fill="#e6edf3">      Payment of $85.22 was declined (authentication required), after 2</text>
+<text x="24" y="303" fill="#e6edf3">      attempt(s). Left alone, this customer recovers 20% of the time.</text>
+<text x="24" y="322" fill="#e6edf3">      Contacting them lifts recovery to 55%, an incremental +34.7pp. They have</text>
+<text x="24" y="341" fill="#e6edf3">      completed 6 prior payments, 100% of them by wallet. There is no consent</text>
+<text x="24" y="360" fill="#e6edf3">      to be called on file, so email is the only channel. Recommend: email the</text>
+<text x="24" y="379" fill="#e6edf3">      Stripe recovery link. Expected value $11.48. Requires operator</text>
+<text x="24" y="398" fill="#e6edf3">      one-click.</text>
+<text x="24" y="417" fill="#e6edf3">      evidence: decline code authentication required · estimated incremental effect 34.7pp · recovers unprompted 20% · consent to be called none · expected value of acting $11.48</text>
+<text x="24" y="436" fill="#e6edf3"></text>
+<text x="24" y="455" fill="#ff7b72">  C2223  DECLINED — inside the model's measured error — estimated effect 1.7pp, floor 3.0pp</text>
+<text x="24" y="474" fill="#e6edf3">      Payment of $120.17 was declined (generic decline), after 1 attempt(s).</text>
+<text x="24" y="493" fill="#e6edf3">      Left alone, this customer recovers 42% of the time. Contacting them</text>
+<text x="24" y="512" fill="#e6edf3">      moves recovery by only +1.7pp, which is inside the noise band. The</text>
+<text x="24" y="531" fill="#e6edf3">      outreach would buy nothing they were not already going to do. They have</text>
+<text x="24" y="550" fill="#e6edf3">      completed 7 prior payments, 86% of them by wallet. There is no consent</text>
+<text x="24" y="569" fill="#e6edf3">      to be called on file, so email is the only channel. Recommend: email the</text>
+<text x="24" y="588" fill="#e6edf3">      Stripe recovery link. Expected value $0.76. Requires two-person</text>
+<text x="24" y="607" fill="#e6edf3">      approval.</text></g></svg>

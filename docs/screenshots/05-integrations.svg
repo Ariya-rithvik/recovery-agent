@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1009.2" height="279" font-family="Consolas,Menlo,monospace" font-size="14">
+<rect width="100%" height="100%" rx="10" fill="#0d1117"/><rect width="100%" height="32" rx="10" fill="#161b22"/>
+<circle cx="20" cy="16" r="6" fill="#ff5f56"/><circle cx="40" cy="16" r="6" fill="#ffbd2e"/><circle cx="60" cy="16" r="6" fill="#27c93f"/>
+<text x="84" y="21" fill="#8b949e" font-size="13">Live run — integrations</text>
+<g xml:space="preserve" style="white-space:pre"><text x="24" y="56" fill="#79c0ff">  8 · LEARN   repeated recovery-call failures -&gt; an installable skill (Scar)</text>
+<text x="24" y="75" fill="#7ee787">      ACCEPTED   skill failed-payment-recovery-call   checks 6/6</text>
+<text x="24" y="94" fill="#e6edf3">      failures handled: naive call plan 0/32  -&gt;  with the learned skill 32/32</text>
+<text x="24" y="113" fill="#e6edf3"></text>
+<text x="24" y="132" fill="#79c0ff">  INTEGRATIONS — what actually happened on this run</text>
+<text x="24" y="151" fill="#7ee787">   Stripe (test mode)    LIVE     pi_3UFL6t3KGHkj4q0e0eZqDCZI  pi_3UFL6y3KGHkj4q0e0nUFWJtk  + 2 Checkout Sessions</text>
+<text x="24" y="170" fill="#7ee787">   Resend (email)        LIVE     11e7a738-7945-4690-85ae-ce798d7149bb</text>
+<text x="24" y="189" fill="#7ee787">   CALL-E (AI voice)     LIVE     call_zEUuaiVn5V_Ucxd_jZPGGg</text>
+<text x="24" y="208" fill="#7ee787">   Slack (webhook)       LIVE     HTTP 200 "ok" (incoming webhooks return no message id)</text>
+<text x="24" y="227" fill="#e6edf3">   Scar (learning)       RAN      local rehearsal, no external calls</text>
+<text x="24" y="246" fill="#7ee787">   customers are SYNTHETIC. Only rows marked LIVE touched a real API, and each shows its reference.</text></g></svg>
