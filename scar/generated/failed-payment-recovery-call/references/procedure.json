@@ -1,0 +1,43 @@
+{
+  "goalClass": "failed_payment_recovery_call",
+  "collectFirst": [
+    "invoice_number",
+    "amount_due",
+    "invoice_date",
+    "hosted_invoice_url"
+  ],
+  "recoveries": [
+    {
+      "kind": "voicemail_disclosure",
+      "when": "voicemail or an answering machine picks up",
+      "then": "Leave a neutral message only: a first name and a number to call back. Never say who the call is from, why you are calling, an amount or any account detail to a machine."
+    },
+    {
+      "kind": "unverified_party",
+      "when": "someone other than the named person answers",
+      "then": "Ask for the named person and say nothing about why you are calling. Continue only once they confirm it is them; if they are not available, leave a first name and a callback number and end the call."
+    },
+    {
+      "kind": "prohibited_action",
+      "when": "the customer wants to pay, or offers card details",
+      "then": "Never take card numbers, bank details or passwords by voice, even when offered. Tell them the payment link is sent by email or SMS as soon as the call ends, and record that in the result."
+    },
+    {
+      "kind": "opt_out_ignored",
+      "when": "the customer asks not to be called again",
+      "then": "Stop there. Confirm the request, record the opt-out in the result, and end the call without mentioning the balance again."
+    },
+    {
+      "kind": "missed_handoff",
+      "when": "the customer disputes the charge or says they cancelled",
+      "then": "Do not ask for payment or argue. Say a person will follow up, record their words and that a human is needed, and end the call."
+    }
+  ],
+  "refuseIf": [
+    "invoice_number is not in hand — 4 calls have died at this question",
+    "amount_due is not in hand — 4 calls have died at this question",
+    "invoice_date is not in hand — 4 calls have died at this question",
+    "hosted_invoice_url is not in hand — 4 calls ended in prohibited_action without it"
+  ],
+  "maxTransfers": 2
+}

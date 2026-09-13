@@ -1,0 +1,20 @@
+{
+  "name": "stripe-recovery-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Failed-payment recovery on Stripe that decides who to contact, whether an AI voice call is worth it, and refuses to spend where contact does harm.",
+  "scripts": {
+    "demo": "node --env-file-if-exists=.env src/recover.mjs",
+    "live": "node --env-file-if-exists=.env src/recover.mjs --live",
+    "test": "node src/policy.test.mjs && node src/pacer.test.mjs && node src/adapters.test.mjs",
+    "calibrate": "node src/calibration.mjs",
+    "bench": "node src/bench.mjs",
+    "learn": "node scar/src/index.ts",
+    "call:status": "node --env-file-if-exists=.env src/calle.mjs",
+    "demo:check": "node tools/demo-check.mjs"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "scar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Phone agents fail the same way twice. Scar turns repeated call failures into a new installable skill.",
+  "scripts": { "learn": "node src/index.ts", "typecheck": "tsc --noEmit" },
+  "devDependencies": { "typescript": "^5.7.2", "@types/node": "^22.10.2" }
+}
