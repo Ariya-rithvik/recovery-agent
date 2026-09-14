@@ -598,17 +598,29 @@ npm run demo
 
 This runs the whole pipeline **offline, with no keys**, in about a second.
 
+### See it as a page, not a terminal
+
+```bash
+npm run dashboard
+```
+
+Opens `out/dashboard.html` in your browser: the same run, as KPI cards, a bar chart of decline reasons, a results
+table with the winning policy highlighted, who got called by hidden archetype, every decision brief with its
+evidence chips, the safety rules that fired, and all four integrations with their live state. One file, no server,
+no dependency — it reads only what `npm run demo` or `npm run live` already wrote to `out/run.json`.
+
 ### Run it live
 
 ```bash
 cp .env.example .env                        # add the keys you have (see Configuration)
 npm run live -- --approvers=asha,ravi       # two approvers unlock the two-person tier
+npm run dashboard                           # then see that run as a page
 npm run call:status -- <call_id>            # read back a call's outcome
 ```
 
-On Windows, double-click **`demo.cmd`** for a menu. It sets the console to UTF-8 first.
+On Windows, double-click **`demo.cmd`** for a menu — options 1 and 2 open the dashboard automatically when they finish.
 
-Every run writes **`out/run.json`**, which holds the results table, pacer verdicts, integration status and the full ledger audit trail.
+Every run writes **`out/run.json`**, which holds the results table, pacer verdicts, integration status and the full ledger audit trail. `out/dashboard.html` is generated from it.
 
 ---
 
@@ -673,8 +685,10 @@ recovery-agent/
 │   └── *.test.mjs           69 tests
 ├── scar/                    learning from failed calls (TypeScript, runs natively)
 │   └── generated/failed-payment-recovery-call/    the learned skill
-├── tools/demo-check.mjs     the full runbook with zero keys
-├── docs/DEMO.md             3-minute demo script
+├── tools/
+│   ├── demo-check.mjs       the full runbook with zero keys
+│   └── dashboard.mjs        out/run.json -> out/dashboard.html, a one-file visual page
+├── docs/DEMO.md             video script
 ├── demo.cmd                 Windows launcher
 └── .env.example             every setting, documented
 ```

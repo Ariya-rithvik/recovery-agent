@@ -442,18 +442,27 @@ console.log('      approved ' + gated.approved.length + '   ('
 console.log('      declined ' + gated.rejected.length + '   spend ' + usd(gated.spend) + ' of ' + usd(budget));
 console.log('');
 const showcase = [gated.approved.find(o => o.action === 'call'), gated.approved.find(o => o.action === 'email')].filter(Boolean);
+// Captured alongside the console output, for the dashboard — same brief object, no re-derivation.
+const decisionCards = [];
 for (const o of showcase) {
+  const b = briefFor(o);
   console.log(await brief(o));
   console.log('      idempotency ' + o.key + '  ·  ' + o.tier.label);
   console.log('');
+  decisionCards.push({ id: o.id, verdict: 'approved', action: o.action, amount_cents: o.amount, tau: o.tau,
+    ev_cents: o.ev, tier: o.tier.id, headline: b.headline, prose: b.claims.map(c => c.text).join(' '),
+    evidence: b.evidence, key: o.key });
 }
 const shown = new Set();
 for (const o of gated.rejected) {
   const kind = o.why.split('(')[0].split('—')[0].trim();
   if (shown.has(kind) || shown.size >= 3) continue;
   shown.add(kind);
+  const b = briefFor(o);
   console.log(await brief(o));
   console.log('');
+  decisionCards.push({ id: o.id, verdict: 'declined', why: o.why, headline: b.headline,
+    prose: b.claims.map(c => c.text).join(' '), evidence: b.evidence });
 }
 console.log('      claims dropped for unsupported numbers: ' + dropped
   + (dropped === 0 ? '   (every sentence traces to evidence)' : ''));
@@ -467,11 +476,14 @@ console.log('');
 console.log('      who did we actually spend on?   (the model was never told these labels)');
 console.log('       ' + pad('archetype', 16) + rp('in batch', 9) + rp('contacted', 11)
   + rp('called', 8) + '   true uplift');
+const archetypeRows = [];
 for (const [arch, meta] of Object.entries(ARCH)) {
   const of = scored.filter(o => o.archetype === arch);
   if (!of.length) continue;
   const c = of.filter(o => contactedSet.has(o.id)).length;
   const called = of.filter(o => calledSet.has(o.id)).length;
+  archetypeRows.push({ archetype: arch, in_batch: of.length, contacted_pct: Math.round((c / of.length) * 100),
+    called_pct: Math.round((called / of.length) * 100), true_uplift_pp: +(meta.tau * 100).toFixed(1), note: meta.note });
   console.log('       ' + pad(arch, 16) + rp(of.length, 9)
     + rp(Math.round((c / of.length) * 100) + '%', 11)
     + rp(Math.round((called / of.length) * 100) + '%', 8)
@@ -650,13 +662,21 @@ writeFileSync(join(ROOT, 'out', 'run.json'), JSON.stringify({
     assumptions: ['call_cost_cents', 'email_share'],
   },
   batch: { failed_payments: batch.length, decided: scored.length, at_risk_cents: batch.reduce((s, o) => s + o.amount, 0) },
+  by_reason: byReason,
   qini: q.coefficient,
   budget_cents: budget,
   table: rows.map(({ name, m }) => ({
     policy: name, contacted: m.contacted, calls: m.calls, recovered: +m.recovered.toFixed(1),
     spent_cents: Math.round(m.spent), net_margin_cents: Math.round(m.net), vs_nothing_cents: Math.round(m.net - nothing.net),
   })),
-  pacer: { halted: paced.stopped.length, nudged: paced.nudges.length, batch: batchVerdict.kind, on_propensity_list_halted: pacedUngated.stopped.length },
+  audit_summary: { approved: gated.approved.length, declined: gated.rejected.length, tiers: qCount,
+    calls: gated.approved.filter(o => o.action === 'call').length, emails: gated.approved.filter(o => o.action === 'email').length,
+    dropped_claims: dropped },
+  decisions: decisionCards,
+  archetypes: archetypeRows,
+  pacer: { halted: paced.stopped.length, nudged: paced.nudges.length, batch: batchVerdict.kind,
+    fired: paced.fired, on_propensity_list_halted: pacedUngated.stopped.length,
+    sample_halts: pacedUngated.stopped.slice(0, 3).map(s => ({ id: s.id, message: s.pacer.message })) },
   integrations: Object.fromEntries(Object.entries(integrations).map(([k, v]) => [k, { state: v.state, detail: v.detail ?? null }])),
   scar,
   audit: ledger.audit({ limit: 1000 }),

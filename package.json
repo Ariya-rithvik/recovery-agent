@@ -12,7 +12,8 @@
     "bench": "node src/bench.mjs",
     "learn": "node scar/src/index.ts",
     "call:status": "node --env-file-if-exists=.env src/calle.mjs",
-    "demo:check": "node tools/demo-check.mjs"
+    "demo:check": "node tools/demo-check.mjs",
+    "dashboard": "node tools/dashboard.mjs --open"
   },
   "engines": {
     "node": ">=22.18"

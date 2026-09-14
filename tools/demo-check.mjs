@@ -70,6 +70,14 @@ console.log('  A. the runbook, no keys present');
 
 await step('npm run demo', ['src/recover.mjs'],
   ['DRY RUN', 'This agent (gated)', 'claims dropped for unsupported numbers: 0', 'ACCEPTED', 'INTEGRATIONS']);
+await step('npm run dashboard (from that run)', ['tools/dashboard.mjs'], ['wrote out']);
+{
+  const html = readFileSync('out/dashboard.html', 'utf8');
+  const openTags = (html.match(/<div/g) ?? []).length, closeTags = (html.match(/<\/div>/g) ?? []).length;
+  line('dashboard.html: tags balanced, no unresolved templates',
+    openTags === closeTags && openTags > 0 && !html.includes('${'),
+    `div open=${openTags} close=${closeTags} unresolved=${(html.match(/\$\{/g) ?? []).length}`);
+}
 await step('npm test — policy ledger', ['src/policy.test.mjs'], ['25 passed, 0 failed']);
 await step('npm test — pacer rules', ['src/pacer.test.mjs'], ['20 passed, 0 failed']);
 await step('npm test — adapters (network disabled)', ['src/adapters.test.mjs'], ['24 passed, 0 failed']);
