@@ -1,10 +1,14 @@
 # Demo video: what to show and what to say, step by step
 
-**Length:** about 4 minutes · **Takes:** one clean take (every live run makes a new call and sends a new email)
+**Length:** about 5 minutes · **Takes:** one clean take (every live run makes a new call and sends a new email)
 
 ---
 
 ## Setup (do this before you press record)
+
+Have `call_bja00GTQ8zKbX8b89gyYDA` (the earlier failed call) and a **second Chrome tab** open on
+[CALL-E's regions table](https://github.com/CALLE-AI/call-e-integrations#supported-regions-and-languages) —
+Scene 11 uses both.
 
 Open these, in this order, so you can switch with `Alt+Tab`:
 
@@ -147,7 +151,21 @@ Open these, in this order, so you can switch with `Alt+Tab`:
 
 ---
 
-## SCENE 11: Stripe dashboard (3:15-3:30)
+## SCENE 11: When the first call didn't work (3:15-3:50)
+
+**SHOW**
+- Terminal: run `npm run call:status -- call_bja00GTQ8zKbX8b89gyYDA` — let the `"no_answer"` JSON sit on screen for a beat.
+- Cut to CALL-E's own GitHub README, "Supported Regions and Languages" table — point at the India row: `International`, default `+1` caller ID.
+- Cut back to terminal: this run's `call:status` result — `"account_holder"`, `"Yeah, go on."`
+
+**SAY**
+> "Our first live call was accepted by CALL-E and ran its full lifecycle — but the phone never rang. We went to CALL-E's own documentation and found why: India is listed as an International line, using a default plus-one caller ID, which Indian carriers commonly filter as suspected spam before the phone even rings. We retried, and this time it reached the account holder, who said 'yeah, go on.'
+>
+> That also pointed at a bigger gap: CALL-E's API has no endpoint to check remaining credit, so a repeated test could silently drain a finite balance. We built our own local safeguard instead — it tracks every real call this code has placed and refuses the next one once you hit your cap, before any network request."
+
+---
+
+## SCENE 12: Stripe dashboard (3:50-4:05)
 
 **SHOW**
 - Switch to the **Stripe** tab and press **F5**.
@@ -158,7 +176,7 @@ Open these, in this order, so you can switch with `Alt+Tab`:
 
 ---
 
-## SCENE 12: The email (3:30-3:45)
+## SCENE 13: The email (4:05-4:20)
 
 **SHOW**
 - Switch to **Gmail** and open **"Acme Cloud: your payment of $85.22 didn't go through."**
@@ -169,7 +187,7 @@ Open these, in this order, so you can switch with `Alt+Tab`:
 
 ---
 
-## SCENE 13: Slack (3:45-3:55)
+## SCENE 14: Slack (4:20-4:30)
 
 **SHOW**
 - Switch to **Slack** and **`#new-channel`**. Point at the **Recovery batch** message.
@@ -179,7 +197,7 @@ Open these, in this order, so you can switch with `Alt+Tab`:
 
 ---
 
-## SCENE 14: Learning and close (3:55-4:15)
+## SCENE 15: Learning and close (4:30-4:50)
 
 **SHOW**
 - Back to the **Terminal** and **8 · LEARN**: "ACCEPTED · checks 6/6".
