@@ -29,6 +29,16 @@
 
 **[▶ Watch the demo on YouTube](https://youtu.be/KDlJxjjAsIw)**
 
+<br/>
+
+### 🔊 Live CALL-E AI Voice Call Recording
+
+Hear the autonomous AI phone agent reach the account holder live:
+
+<video src="docs/ai_calle.mp4" controls="controls" width="560"></video>
+
+**[🎧 Listen or download live call recording (docs/ai_calle.mp4)](docs/ai_calle.mp4)**
+
 </div>
 
 > **Note for reviewers:** because of network issues while recording, the video may lag in places or may not be
@@ -487,7 +497,7 @@ below is copied from that run's `INTEGRATIONS` output.
 | App | Role | Live result | Reference |
 | --- | --- | --- | --- |
 | **Stripe** | Source of the failure, and the recovery link | 2 customers; 2 PaymentIntents **declined by Stripe itself with `authentication_required`**, read back with their event ids; 2 Checkout Sessions | `pi_3UFL6t3KGHkj4q0e0eZqDCZI` · `evt_3UFL6t3KGHkj4q0e05s99IVG` |
-| **CALL-E** | AI voice call to the customer | Call placed after two distinct approvals, **reached the account holder**, who said *"Yeah, go on"* | `call_F-9Tacu-TR1TyLxyTdH7LQ` |
+| **CALL-E** | AI voice call to the customer | Call placed after two distinct approvals, **reached the account holder**, who said *"Yeah, go on"* · **[🔊 Listen to call recording](docs/ai_calle.mp4)** | `call_F-9Tacu-TR1TyLxyTdH7LQ` |
 | **Resend** | Recovery email | Delivered to the demo inbox with a working Stripe Checkout link | `11e7a738-7945-4690-85ae-ce798d7149bb` |
 | **Slack** | Operator notification | Batch summary and approval queue posted | HTTP 200 `ok` |
 
