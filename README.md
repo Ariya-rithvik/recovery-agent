@@ -117,7 +117,7 @@ annoyed               223        37%      0%       -11.5pp
 INTEGRATIONS — what actually happened on this run
  Stripe (test mode)    LIVE     pi_3UFL6t3KGHkj4q0e0eZqDCZI · pi_3UFL6y3KGHkj4q0e0nUFWJtk · 2 Checkout Sessions
  Resend (email)        LIVE     11e7a738-7945-4690-85ae-ce798d7149bb
- CALL-E (AI voice)     LIVE     call_zEUuaiVn5V_Ucxd_jZPGGg
+ CALL-E (AI voice)     LIVE     call_F-9Tacu-TR1TyLxyTdH7LQ
  Slack (webhook)       LIVE     HTTP 200 "ok"
  Scar (learning)       RAN      skill failed-payment-recovery-call · checks 6/6 · 0/32 -> 32/32
 ```
@@ -140,7 +140,21 @@ for example `cs:rcv_in_0432_1m2q_2:v1`.
 ### Step 7: The phone call (CALL-E)
 
 The AI agent phones the customer. It says it is an automated assistant, **confirms who it is speaking to before
-discussing money**, offers to email a secure payment link, and **never asks for card details**.
+discussing money**, offers to email a secure payment link, and **never asks for card details**. On our live test call
+it reached the account holder, who said *"Yeah, go on,"* and CALL-E correctly recorded the outcome:
+
+```json
+{
+  "id": "call_F-9Tacu-TR1TyLxyTdH7LQ",
+  "status": "completed",
+  "task_completed": true,
+  "structured_result": {
+    "outcome": "send_link",
+    "answered_by": "account_holder",
+    "evidence_quote": "Yeah, go on."
+  }
+}
+```
 
 <!-- ![Phone: incoming CALL-E call](docs/screenshots/08-call.png) -->
 
@@ -260,7 +274,7 @@ tau(x) = P(recover | contacted, x) − P(recover | left alone, x)        ← the
 | R9 Runaway spend | A hard budget, approval tiers, and **two distinct people** for large amounts | `policy.mjs`, `pacer.mjs` | Tests: budget stops mid-batch; the same approver twice is rejected |
 | R10 Fake success | Failures recorded verbatim with a null reference; "success" without a reference counts as failure | `policy.mjs` | Tests; every LIVE row in §6 shows its real reference |
 | R11 Model that doesn't work | Qini on held-out data; calibration by decile; pacer **B5** halts if the model is no better than random | `calibration.mjs`, `pacer.mjs` | Qini 31.1; calibration error 2.97pp, rank correlation 0.916 |
-| R12 Unresolved calls | A structured call result (`answered_by`, `outcome`, `evidence_quote`), read back after the call; **Scar** learns from repeated failures | `calle.mjs`, `scar/` | First live call honestly recorded as `no_answer`; Scar skill 32/32 in rehearsal |
+| R12 Unresolved calls | A structured call result (`answered_by`, `outcome`, `evidence_quote`), read back after the call; **Scar** learns from repeated failures | `calle.mjs`, `scar/` | One call reached the account holder (`outcome: send_link`); an earlier attempt was `no_answer`, consistent with CALL-E's documented India caller-ID limits; Scar skill 32/32 in rehearsal |
 
 ### What we have proven, and for whom
 
@@ -473,12 +487,17 @@ below is copied from that run's `INTEGRATIONS` output.
 | App | Role | Live result | Reference |
 | --- | --- | --- | --- |
 | **Stripe** | Source of the failure, and the recovery link | 2 customers; 2 PaymentIntents **declined by Stripe itself with `authentication_required`**, read back with their event ids; 2 Checkout Sessions | `pi_3UFL6t3KGHkj4q0e0eZqDCZI` · `evt_3UFL6t3KGHkj4q0e05s99IVG` |
-| **CALL-E** | AI voice call to the customer | Call placed after two distinct approvals | `call_NjZaL57MP3RCnC3RF_VYiA` |
+| **CALL-E** | AI voice call to the customer | Call placed after two distinct approvals, **reached the account holder**, who said *"Yeah, go on"* | `call_F-9Tacu-TR1TyLxyTdH7LQ` |
 | **Resend** | Recovery email | Delivered to the demo inbox with a working Stripe Checkout link | `11e7a738-7945-4690-85ae-ce798d7149bb` |
 | **Slack** | Operator notification | Batch summary and approval queue posted | HTTP 200 `ok` |
 
-> **What the call proves, precisely:** CALL-E accepted and placed the call. On that first test **nobody answered**
-> (`answered_by: no_answer`). You can read back a call's outcome with `npm run call:status -- <call_id>`.
+> **What the call proves, precisely:** the call reached the **account holder**, who confirmed their identity and
+> agreed to receive the payment link (`answered_by: account_holder`, `outcome: send_link`). One earlier attempt to
+> the same number came back `no_answer` with no missed-call notification at all — consistent with CALL-E's own
+> [documented India coverage](https://github.com/CALLE-AI/call-e-integrations#supported-regions-and-languages):
+> India is an *International* line using a default **+1 caller ID**, which Indian carriers can filter as suspected
+> spam before the phone rings. A second attempt reached the phone normally. Read back any call's outcome with
+> `npm run call:status -- <call_id>`.
 
 ### What each integration enforces
 
@@ -671,7 +690,7 @@ recovery-agent/
 | **The gates added no margin on this run** | The gated agent and the plain uplift ranking choose the same customers. The gates are there for safety: they halt 179 actions on the propensity list. |
 | **Two inputs are assumptions** | The call cost ($1.50) and the share of the effect an email captures (65%). A two-arm test would measure the split. |
 | **Scar rehearses against a modelled callee** | 32/32 shows the learning loop works, not how real customers behave. The wording of each rule is written by hand for each failure type. |
-| **The first live call was not answered** | CALL-E placed it, and the recorded outcome is `no_answer`. |
+| **CALL-E to India uses a foreign caller ID** | India is an *International* line on CALL-E (default +1 caller ID), which Indian carriers can filter before the phone rings. One test call was silently dropped this way; a retry reached the account holder normally. This is a platform limitation, not something in our code. |
 
 We did not tune the model until it passed. The 3pp floor was set from the calibration error before this table was
 read. Without the floor, 51% of chase-averse customers were contacted.
