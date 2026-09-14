@@ -80,7 +80,7 @@ await step('npm run dashboard (from that run)', ['tools/dashboard.mjs'], ['wrote
 }
 await step('npm test — policy ledger', ['src/policy.test.mjs'], ['25 passed, 0 failed']);
 await step('npm test — pacer rules', ['src/pacer.test.mjs'], ['20 passed, 0 failed']);
-await step('npm test — adapters (network disabled)', ['src/adapters.test.mjs'], ['24 passed, 0 failed']);
+await step('npm test — adapters (network disabled)', ['src/adapters.test.mjs'], ['30 passed, 0 failed']);
 await step('npm run calibrate', ['src/calibration.mjs'], ['WELL CALIBRATED']);
 await step('npm run bench', ['src/bench.mjs'], ['THESIS HOLDS']);
 

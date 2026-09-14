@@ -12,8 +12,10 @@ import {
   formEncode, keyMode, stripeRequest, verifyWebhook, signPayload, normalizeEvent,
 } from './stripe.mjs';
 import {
-  buildRecoveryTask, assertNoCardCollection, assertAllowedNumber, placeRecoveryCall, SAFETY_RULES,
+  buildRecoveryTask, assertNoCardCollection, assertAllowedNumber, placeRecoveryCall,
+  readCallLedger, callBudget, SAFETY_RULES,
 } from './calle.mjs';
+import { existsSync, mkdirSync, rmSync, writeFileSync as writeFile } from 'node:fs';
 import { buildRecoveryEmail, sendRecoveryEmail } from './email.mjs';
 import { postToSlack } from './slack.mjs';
 import { ActionLedger } from './policy.mjs';
@@ -109,6 +111,43 @@ await withEnv({ CALLE_API_KEY: 'test_key', CALLE_ALLOWED_NUMBERS: '+919999900001
   ok('a number not on the allowlist -> refused before dialling, and masked in the error',
     /not on CALLE_ALLOWED_NUMBERS/.test(e2 ?? '') && !/4155550123/.test(e2 ?? '') && fetchCalls === 0, `${e2} fetch=${fetchCalls}`);
 });
+
+/* ── CALL-E: the local credit ledger, since the API has no balance endpoint ── */
+{
+  const LEDGER = 'out/.test-calle-usage-' + process.pid + '.json';
+  rmSync(LEDGER, { force: true });
+
+  ok('a missing ledger file reads as zero used, not an error', readCallLedger(LEDGER).count === 0);
+
+  const b1 = callBudget({ max: 2, path: LEDGER });
+  ok('a fresh ledger has the full cap remaining', b1.used === 0 && b1.remaining === 2 && b1.exhausted === false);
+
+  mkdirSync('out', { recursive: true });
+  writeFile(LEDGER, JSON.stringify({ count: 2, calls: [] }));
+  ok('callBudget reports exhausted once used reaches max', callBudget({ max: 2, path: LEDGER }).exhausted === true);
+
+  await withEnv({ CALLE_API_KEY: 'test_key', CALLE_ALLOWED_NUMBERS: '+919999900001', DEMO_PHONE: '+919999900001',
+    CALLE_USAGE_FILE: LEDGER, CALLE_MAX_CALLS: '2' }, async () => {
+    fetchCalls = 0;
+    const e = await threw(() => placeRecoveryCall(o, { merchant: 'Acme Cloud', customerName: 'x' }));
+    ok('an exhausted credit cap refuses the call before dialling', /credit cap reached \(2\/2/.test(e ?? '') && fetchCalls === 0,
+      `${e} fetch=${fetchCalls}`);
+  });
+
+  writeFile(LEDGER, JSON.stringify({ count: 0, calls: [] }));
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ call_id: 'call_test123', status: 'created' }), { status: 200 });
+  await withEnv({ CALLE_API_KEY: 'test_key', CALLE_ALLOWED_NUMBERS: '+919999900001', DEMO_PHONE: '+919999900001',
+    CALLE_USAGE_FILE: LEDGER, CALLE_MAX_CALLS: '2' }, async () => {
+    const r = await placeRecoveryCall(o, { merchant: 'Acme Cloud', customerName: 'x' });
+    ok('a successful call is recorded and the budget usage is returned', r.external_ref === 'call_test123' && r.budget.used === 1 && r.budget.max === 2,
+      JSON.stringify(r));
+    ok('the ledger file itself now shows one call used', readCallLedger(LEDGER).count === 1);
+  });
+  globalThis.fetch = savedFetch;
+
+  rmSync(LEDGER, { force: true });
+}
 
 /* ── email ── */
 await withEnv({ RESEND_API_KEY: 're_test', DEMO_EMAIL: 'team@example.org' }, async () => {

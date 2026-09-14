@@ -13,11 +13,20 @@
  *     The customer fixes their card on Stripe's page, never by voice (PCI).
  *   - the task tells the agent to say it is automated, verify identity before
  *     disclosing anything, keep the amount off voicemail, and honour an opt-out
+ *   - REFUSES TO PLACE A CALL ONCE A LOCAL CREDIT CAP IS REACHED (see below).
+ *     Unlike Stripe's test mode, CALL-E charges real credits for every call it
+ *     places, and its API exposes no balance or spend endpoint to check against
+ *     (confirmed against the published API reference: quickstart, calls,
+ *     goal-runs, webhooks, errors, sdks, regions — no accounts/balance route).
+ *     A cap enforced locally, and persisted across runs, is the only thing
+ *     standing between a looped or repeated `--live` run and a drained account.
  *
  *   node --env-file=.env src/calle.mjs <call_id>     fetch one call's result
  */
 
 import { pathToFileURL } from 'node:url';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { usd } from './money.mjs';
 
 export const CALLE_BASE_URL = process.env.CALLE_BASE_URL ?? 'https://api.heycall-e.com';
@@ -148,6 +157,50 @@ async function request(path, init = {}) {
 export const createCall = input => request('/v1/calls', { method: 'POST', body: JSON.stringify(input) });
 export const getCall = id => request('/v1/calls/' + encodeURIComponent(id));
 
+/* ────────────────────── local call-credit ledger ────────────────────── */
+
+/**
+ * CALL-E's dashboard shows an "Available Credits" balance, but the published
+ * API has no endpoint to read it — nothing to preflight against the way
+ * `stripe.mjs` preflights a key. So the cap lives here instead: a small JSON
+ * file, outside git, that counts every REAL call this codebase has ever
+ * placed and refuses the next one once the count reaches CALLE_MAX_CALLS.
+ *
+ * This is deliberately conservative rather than exact: it tracks calls WE
+ * placed, not the account's true remaining balance (a call placed through the
+ * dashboard, a refund, or a second machine sharing the key would not be
+ * reflected here). Treat the cap as a local seatbelt, not a source of truth —
+ * the account's own dashboard is that.
+ */
+// A function, not a frozen constant: read fresh each call, so a test (or a
+// second process pointed at a different file) can redirect it via the
+// environment without needing to reload this module.
+const defaultLedgerPath = () => process.env.CALLE_USAGE_FILE || 'out/calle-usage.json';
+
+export function readCallLedger(path = defaultLedgerPath()) {
+  if (!existsSync(path)) return { count: 0, calls: [] };
+  try {
+    const j = JSON.parse(readFileSync(path, 'utf8'));
+    return { count: Number(j.count) || 0, calls: Array.isArray(j.calls) ? j.calls : [] };
+  } catch {
+    return { count: 0, calls: [] };            // a corrupt file fails safe (blocks), not open
+  }
+}
+
+export function callBudget({ max = Number(process.env.CALLE_MAX_CALLS || 20), path = defaultLedgerPath() } = {}) {
+  const { count } = readCallLedger(path);
+  return { used: count, max, remaining: Math.max(0, max - count), exhausted: count >= max };
+}
+
+function recordCallPlaced({ callId, to }, path = defaultLedgerPath()) {
+  const ledger = readCallLedger(path);
+  ledger.count += 1;
+  ledger.calls.push({ call_id: callId, to: mask(to), at: new Date().toISOString() });
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(ledger, null, 2));
+  return ledger.count;
+}
+
 /**
  * Place one recovery call. SIDE EFFECT: this dials a real phone and spends a call
  * from the account balance. It returns as soon as CALL-E accepts the call; the
@@ -157,6 +210,12 @@ export const getCall = id => request('/v1/calls/' + encodeURIComponent(id));
 export async function placeRecoveryCall(o, { merchant, customerName, link, phone = process.env.DEMO_PHONE } = {}) {
   apiKey();                                                     // not configured -> say so first
   if (o.consent !== true) throw new CalleError('refusing to call: no consent to be called on file');
+  const budget = callBudget();
+  if (budget.exhausted) {
+    throw new CalleError(`refusing to place a real call: local CALL-E credit cap reached `
+      + `(${budget.used}/${budget.max} calls used). Raise CALLE_MAX_CALLS in .env if the account `
+      + `genuinely has more credit — this cap tracks calls placed, not the account's real balance.`);
+  }
   const to = assertAllowedNumber(phone);
   const task = buildRecoveryTask(o, { merchant, customerName, link });
 
@@ -167,7 +226,8 @@ export async function placeRecoveryCall(o, { merchant, customerName, link, phone
   });
   const id = created.call_id ?? created.id;
   if (!id) throw new CalleError('CALL-E did not return a call id', undefined, JSON.stringify(created).slice(0, 300));
-  return { external_ref: id, status: created.status ?? 'created', to: mask(to) };
+  const used = recordCallPlaced({ callId: id, to });
+  return { external_ref: id, status: created.status ?? 'created', to: mask(to), budget: { used, max: budget.max } };
 }
 
 /* ─────────────────────────────── CLI ─────────────────────────────── */

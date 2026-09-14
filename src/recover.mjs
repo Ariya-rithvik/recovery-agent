@@ -25,7 +25,7 @@ import { fitUplift, quadrant, qini } from './uplift.mjs';
 import { explain, validate, phrase, render } from './explain.mjs';
 import { ActionLedger, tierFor, TIERS } from './policy.mjs';
 import { pace, judgeBatch } from './pacer.mjs';
-import { buildRecoveryTask, placeRecoveryCall, SAFETY_RULES } from './calle.mjs';
+import { buildRecoveryTask, placeRecoveryCall, callBudget, SAFETY_RULES } from './calle.mjs';
 import { buildRecoveryEmail, sendRecoveryEmail } from './email.mjs';
 import { postToSlack, batchMessage } from './slack.mjs';
 import { usd } from './money.mjs';
@@ -592,7 +592,14 @@ if (!LIVE) {
     if (a.state === 'succeeded') {
       console.log('        -> SENT  ref ' + a.external_ref + '   approved by ' + (a.approvals.join(' + ') || 'auto tier')
         + (link ? '' : '   (no Stripe link: Stripe not connected)'));
-      setStatus(k, 'live', a.external_ref);
+      let detail = a.external_ref;
+      if (k === 'call') {
+        const b = callBudget();
+        console.log('           CALL-E credit ledger: ' + b.used + '/' + b.max + ' real calls used this account ('
+          + b.remaining + ' remaining before this codebase refuses to dial again)');
+        detail += '  (call ledger ' + b.used + '/' + b.max + ')';
+      }
+      setStatus(k, 'live', detail);
     } else {
       console.log('        -> NOT SENT  ' + a.error);
       setStatus(k, notSet(a.error) ? 'not_set' : 'failed', a.error);

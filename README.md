@@ -9,7 +9,7 @@
 [![Resend](https://img.shields.io/badge/Resend-email%20·%20live-000000)](#live-proof)
 [![Slack](https://img.shields.io/badge/Slack-webhook%20·%20live-4A154B?logo=slack&logoColor=white)](#live-proof)
 <br/>
-[![Tests](https://img.shields.io/badge/tests-69%20passing-2ea44f)](#testing)
+[![Tests](https://img.shields.io/badge/tests-75%20passing-2ea44f)](#testing)
 [![Demo check](https://img.shields.io/badge/demo%20check-11%2F11%20with%20zero%20keys-2ea44f)](#testing)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-blue)](#quick-start)
 [![Node](https://img.shields.io/badge/node-%E2%89%A5%2022.18-339933?logo=node.js&logoColor=white)](#quick-start)
@@ -271,7 +271,7 @@ tau(x) = P(recover | contacted, x) − P(recover | left alone, x)        ← the
 | R6 Wrong person | The call script requires identity confirmation first, and leaves nothing about money on voicemail | `calle.mjs` | Script carries all 6 safety rules (test); rehearsed by Scar |
 | R7 Invented facts | Numbers come from code; every sentence is checked against evidence; an optional LLM may only rephrase | `explain.mjs` | **0 unsupported claims** dropped on the run |
 | R8 Double action | sha256 idempotency key checked in our own ledger **before** the API call; Stripe `Idempotency-Key` on every request | `policy.mjs`, `stripe.mjs` | Tests: a replayed action never calls the adapter again |
-| R9 Runaway spend | A hard budget, approval tiers, and **two distinct people** for large amounts | `policy.mjs`, `pacer.mjs` | Tests: budget stops mid-batch; the same approver twice is rejected |
+| R9 Runaway spend | A hard budget, approval tiers, **two distinct people** for large amounts, and a persistent local cap on real CALL-E calls (its API has no balance to check) | `policy.mjs`, `pacer.mjs`, `calle.mjs` | Tests: budget stops mid-batch; the same approver twice is rejected; the call cap refuses before dialling |
 | R10 Fake success | Failures recorded verbatim with a null reference; "success" without a reference counts as failure | `policy.mjs` | Tests; every LIVE row in §6 shows its real reference |
 | R11 Model that doesn't work | Qini on held-out data; calibration by decile; pacer **B5** halts if the model is no better than random | `calibration.mjs`, `pacer.mjs` | Qini 31.1; calibration error 2.97pp, rank correlation 0.916 |
 | R12 Unresolved calls | A structured call result (`answered_by`, `outcome`, `evidence_quote`), read back after the call; **Scar** learns from repeated failures | `calle.mjs`, `scar/` | One call reached the account holder (`outcome: send_link`); an earlier attempt was `no_answer`, consistent with CALL-E's documented India caller-ID limits; Scar skill 32/32 in rehearsal |
@@ -504,7 +504,7 @@ below is copied from that run's `INTEGRATIONS` output.
 | App | Safeguards (all enforced in code) |
 | --- | --- |
 | **Stripe** | Refuses `sk_live_` keys before any request · sends an `Idempotency-Key` on every POST, so a re-run never creates duplicates · retries only on 429 and 5xx · verifies webhook signatures (`Stripe-Signature`) with replay tolerance and a constant-time comparison |
-| **CALL-E** | No consent, no call · dials only allowlisted numbers, masked in logs · **refuses any call script that collects card details (PCI)** · the script makes the agent say it is automated, confirm identity before discussing money, leave nothing on voicemail, honour opt-outs and pass disputes to a human |
+| **CALL-E** | No consent, no call · dials only allowlisted numbers, masked in logs · **refuses any call script that collects card details (PCI)** · the script makes the agent say it is automated, confirm identity before discussing money, leave nothing on voicemail, honour opt-outs and pass disputes to a human · **refuses the next call once a local credit cap (`CALLE_MAX_CALLS`) is reached** — CALL-E's API has no balance endpoint to preflight against, so a small file (`out/calle-usage.json`) counts every real call this codebase has placed and persists across runs, so a repeated `--live` run cannot silently drain the account |
 | **Resend** | Sends only to `DEMO_EMAIL`, never to a customer address · never asks for card details; the card is entered only on Stripe's page |
 | **Slack** | Notification only · a webhook can't tell who clicked, so it never approves anything |
 
@@ -648,7 +648,7 @@ Every variable is optional. A missing key shows as `NOT SET` in the output inste
 ## 11. Testing
 
 ```bash
-npm test               # 69 safety properties
+npm test               # 75 safety properties
 npm run demo:check     # the full runbook with all 14 environment variables deleted
 npm run calibrate      # predicted vs delivered uplift, by decile
 npm run bench          # the same method applied to a Stripe coupon decision
@@ -659,7 +659,7 @@ npm run learn          # Scar, human-readable
 | --- | ---: | --- |
 | Ledger | 25 | idempotency, approval tiers, distinct approvers, budget stop, verbatim failure |
 | Pacer | 20 | every rule, idempotency, halts-before-nudges ordering |
-| Adapters | 24 | Stripe signatures and encoding, live-key refusal, consent, allowlist, PCI guard, demo-inbox guard. **Runs with the network disabled**, and each guard asserts no request was sent. |
+| Adapters | 30 | Stripe signatures and encoding, live-key refusal, consent, allowlist, PCI guard, demo-inbox guard, the local call-credit ledger and its refusal. **Runs with the network disabled**, and each guard asserts no request was sent. |
 | **Demo check** | **11/11** | the demo, tests, calibration, benchmark and Scar; `--live` with no keys (every app reports `NOT SET`); a live Stripe key refused; no leftover text from earlier versions |
 
 ---
@@ -682,7 +682,7 @@ recovery-agent/
 │   ├── slack.mjs            Slack webhook
 │   ├── money.mjs            cents → "$1.50", in one place
 │   ├── bench.mjs            the same method on a coupon decision
-│   └── *.test.mjs           69 tests
+│   └── *.test.mjs           75 tests
 ├── scar/                    learning from failed calls (TypeScript, runs natively)
 │   └── generated/failed-payment-recovery-call/    the learned skill
 ├── tools/
